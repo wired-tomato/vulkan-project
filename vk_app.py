@@ -1,4 +1,4 @@
-import vulkan as vk
+from vulkan import *
 import glfw
 
 from windowing import Window
@@ -11,21 +11,21 @@ class VkApp:
         self._validation_layers = []
         self._enable_validation = False
         self._instance = None
+        self._debug_callback = None
 
     def create_instance(self):
         # Vulkan app info - capital V indicates creation of C struct
         # sType specifies structure type, required in all vulkan structs
-        app_info = vk.VkApplicationInfo(
-            sType=vk.VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        app_info = VkApplicationInfo(
+            #sType=VK_STRUCTURE_TYPE_APPLICATION_INFO - sType is specified by default in bindings,
             pApplicationName=self._window.name(),
-            applicationVersion=vk.VK_MAKE_VERSION(1, 0, 0),
+            applicationVersion=VK_MAKE_VERSION(1, 0, 0),
             pEngineName=self._window.name(),
-            engineVersion=vk.VK_MAKE_VERSION(1, 0, 0),
-            apiVersion=vk.VK_API_VERSION_1_0,
+            engineVersion=VK_MAKE_VERSION(1, 0, 0),
+            apiVersion=VK_API_VERSION_1_0,
         )
 
-        # find platform specific surface extensions - glfw does this for us
-        platform_extensions = glfw.get_required_instance_extensions()
+        extensions = self.get_extensions()
 
         #check that validation layers exist on system
         if self._enable_validation and not self.check_for_layers(self._validation_layers):
@@ -37,21 +37,42 @@ class VkApp:
             layers = []
 
         # instance create info
-        create_info = vk.VkInstanceCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        create_info = VkInstanceCreateInfo(
+            #sType=VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
             pApplicationInfo=app_info,
-            enabledExtensionCount=len(platform_extensions),
-            ppEnabledExtensionNames=platform_extensions, # pass required extensions, will raise exception if any are not found
+            enabledExtensionCount=len(extensions),
+            ppEnabledExtensionNames=extensions, # pass required extensions, will raise exception if any are not found
             enabledLayerCount=len(layers), # pass enabled validation layers to instance
             ppEnabledLayerNames=layers,
             flags=0
         )
 
-        self._instance = vk.vkCreateInstance(create_info, None)
+        self._instance = vkCreateInstance(create_info, None)
+
+    def setup_debug_messenger(self):
+        debugCreateInfo = VkDebugUtilsMessengerCreateInfoEXT(
+            messageSeverity=VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT,
+            messageType=VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+            pfnUserCallback=self.__debugCallback
+        )
+        #self._debug_callback = vkCreateDebugReportCallbackEXT(self._instance, debugCreateInfo, None)
+
+    def __debugCallback(*args):
+        print('DEBUG: {} {}'.format(args[5], args[6]))
+        return VK_FALSE
+
+    #seperate extensions as they will be needed on the device later
+    def get_extensions(self):
+        # find platform specific surface extensions - glfw does this for us
+        extensions = glfw.get_required_instance_extensions()
+        if self._enable_validation:
+            extensions.append(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+
+        return extensions
 
     def check_for_layers(self, layers):
         # get available system layers
-        available_layers = list(vk.vkEnumerateInstanceLayerProperties())
+        available_layers = list(vkEnumerateInstanceLayerProperties())
 
         # loop over layers making sure all the requested layers are present on system
         for layer in layers:
@@ -76,5 +97,5 @@ class VkApp:
         self._enable_validation = False
 
     def cleanup(self):
-        vk.vkDestroyInstance(self._instance, None)
+        vkDestroyInstance(self._instance, None)
 
