@@ -54,12 +54,12 @@ class VkApp:
         self._instance = vkCreateInstance(create_info, None)
 
     def setup_debug_messenger(self):
-        debugCreateInfo = VkDebugUtilsMessengerCreateInfoEXT(
+        debug_create_info = VkDebugUtilsMessengerCreateInfoEXT(
             messageSeverity=VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT,
             messageType=VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
             pfnUserCallback=self.__debugCallback
         )
-        self._debug_callback = vkCreateDebugUtilsMessengerEXT(self._instance, debugCreateInfo, None)
+        self._debug_callback = vkCreateDebugUtilsMessengerEXT(self._instance, debug_create_info, None)
 
     def __debugCallback(*args):
         print("VULKAN DEBUG: {} {}".format(args[1], args[2]))
