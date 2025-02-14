@@ -16,7 +16,12 @@ class VkApp:
         self._physical_device = None
         self._queue_family_indices = QueueFamilyIndices(None)
 
-    def create_instance(self):
+    def init(self):
+        self._create_instance()
+        self._setup_debug_messenger()
+        self._select_physical_device()
+
+    def _create_instance(self):
         # Vulkan app info - capital V indicates creation of C struct
         # sType specifies structure type, required in all vulkan structs
         app_info = VkApplicationInfo(
@@ -53,7 +58,7 @@ class VkApp:
 
         self._instance = vkCreateInstance(create_info, None)
 
-    def setup_debug_messenger(self):
+    def _setup_debug_messenger(self):
         debug_create_info = VkDebugUtilsMessengerCreateInfoEXT(
             messageSeverity=VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT,
             messageType=VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
@@ -65,7 +70,7 @@ class VkApp:
         print("VULKAN DEBUG: {} {}".format(args[1], args[2]))
         return VK_FALSE
 
-    def select_physical_device(self):
+    def _select_physical_device(self):
         #returns list of all physical devices (with vulkan support) on the system
         devices = vkEnumeratePhysicalDevices(self._instance)
 
