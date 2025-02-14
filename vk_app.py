@@ -1,7 +1,7 @@
 from vulkan import *
 import glfw
 
-from vk_ext import vkCreateDebugReportCallbackEXT
+from vk_ext import vkCreateDebugUtilsMessengerEXT
 from windowing import Window
 
 
@@ -34,6 +34,7 @@ class VkApp:
 
         if self._enable_validation:
             layers = self._validation_layers
+            extensions.append(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
         else:
             layers = []
 
@@ -56,10 +57,10 @@ class VkApp:
             messageType=VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
             pfnUserCallback=self.__debugCallback
         )
-        self._debug_callback = vkCreateDebugReportCallbackEXT(self._instance, debugCreateInfo, None)
+        self._debug_callback = vkCreateDebugUtilsMessengerEXT(self._instance, debugCreateInfo, None)
 
     def __debugCallback(*args):
-        print('DEBUG: {} {}'.format(args[5], args[6]))
+        print("VULKAN DEBUG: {} {}".format(args[1], args[2]))
         return VK_FALSE
 
     # seperate extensions as they will be needed on the device later
