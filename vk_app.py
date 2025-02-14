@@ -1,6 +1,7 @@
 from vulkan import *
 import glfw
 
+from vk_ext import vkCreateDebugReportCallbackEXT
 from windowing import Window
 
 
@@ -17,7 +18,7 @@ class VkApp:
         # Vulkan app info - capital V indicates creation of C struct
         # sType specifies structure type, required in all vulkan structs
         app_info = VkApplicationInfo(
-            #sType=VK_STRUCTURE_TYPE_APPLICATION_INFO - sType is specified by default in bindings,
+            # sType=VK_STRUCTURE_TYPE_APPLICATION_INFO - sType is specified by default in bindings,
             pApplicationName=self._window.name(),
             applicationVersion=VK_MAKE_VERSION(1, 0, 0),
             pEngineName=self._window.name(),
@@ -27,7 +28,7 @@ class VkApp:
 
         extensions = self.get_extensions()
 
-        #check that validation layers exist on system
+        # check that validation layers exist on system
         if self._enable_validation and not self.check_for_layers(self._validation_layers):
             raise RuntimeError("Validation layers not available")
 
@@ -38,11 +39,11 @@ class VkApp:
 
         # instance create info
         create_info = VkInstanceCreateInfo(
-            #sType=VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            # sType=VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
             pApplicationInfo=app_info,
             enabledExtensionCount=len(extensions),
-            ppEnabledExtensionNames=extensions, # pass required extensions, will raise exception if any are not found
-            enabledLayerCount=len(layers), # pass enabled validation layers to instance
+            ppEnabledExtensionNames=extensions,  # pass required extensions, will raise exception if any are not found
+            enabledLayerCount=len(layers),  # pass enabled validation layers to instance
             ppEnabledLayerNames=layers,
             flags=0
         )
@@ -55,13 +56,13 @@ class VkApp:
             messageType=VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
             pfnUserCallback=self.__debugCallback
         )
-        #self._debug_callback = vkCreateDebugReportCallbackEXT(self._instance, debugCreateInfo, None)
+        self._debug_callback = vkCreateDebugReportCallbackEXT(self._instance, debugCreateInfo, None)
 
     def __debugCallback(*args):
         print('DEBUG: {} {}'.format(args[5], args[6]))
         return VK_FALSE
 
-    #seperate extensions as they will be needed on the device later
+    # seperate extensions as they will be needed on the device later
     def get_extensions(self):
         # find platform specific surface extensions - glfw does this for us
         extensions = glfw.get_required_instance_extensions()
@@ -98,4 +99,3 @@ class VkApp:
 
     def cleanup(self):
         vkDestroyInstance(self._instance, None)
-
