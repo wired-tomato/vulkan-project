@@ -13,6 +13,8 @@ class VkApp:
         self._enable_validation = False
         self._instance = None
         self._debug_callback = None
+        self._physical_device = None
+        self._queue_family_indices = QueueFamilyIndices(None)
 
     def create_instance(self):
         # Vulkan app info - capital V indicates creation of C struct
@@ -63,6 +65,40 @@ class VkApp:
         print("VULKAN DEBUG: {} {}".format(args[1], args[2]))
         return VK_FALSE
 
+    def select_physical_device(self):
+        #returns list of all physical devices (with vulkan support) on the system
+        devices = vkEnumeratePhysicalDevices(self._instance)
+
+        for device in devices:
+            is_suitable, queue_family_indices = self.is_device_suitable(device)
+            if is_suitable:
+                self._physical_device = device
+                self._queue_family_indices = queue_family_indices
+                break
+
+        if not self._physical_device:
+            raise RuntimeError("No suitable vulkan devices found")
+
+    def find_queue_families(self, device):
+        queue_families = vkGetPhysicalDeviceQueueFamilyProperties(device)
+        queue_family_indices = QueueFamilyIndices()
+
+        idx = 0
+        for queue_family in queue_families:
+            if queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT != 0:
+                queue_family_indices.graphics_family = idx
+
+            idx += 1
+
+        return queue_family_indices
+
+    def is_device_suitable(self, device):
+        #find required indices
+        queue_family_indices = self.find_queue_families(device)
+
+        #return if the queues are complete and the queues to avoid queue searching twice
+        return queue_family_indices.is_complete(), queue_family_indices
+
     # seperate extensions as they will be needed on the device later
     def get_extensions(self):
         # find platform specific surface extensions - glfw does this for us
@@ -100,3 +136,10 @@ class VkApp:
 
     def cleanup(self):
         vkDestroyInstance(self._instance, None)
+
+class QueueFamilyIndices:
+    def __init__(self, graphics_family=None):
+        self.graphics_family = graphics_family
+
+    def is_complete(self) -> bool:
+        return self.graphics_family is not None
