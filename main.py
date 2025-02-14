@@ -15,6 +15,7 @@ def main():
     vk_app.validation_layer("VK_LAYER_KHRONOS_validation")
     vk_app.enable_validation() # comment out this line to run without validation enabled, removes vulkan SDK dependency
     vk_app.create_instance()
+    vk_app.setup_debug_messenger()
 
     while not window.should_close():
         window.update()
