@@ -31,6 +31,7 @@ class VkApp:
         self._select_physical_device()
         self._create_logical_device()
         self._swap_chain.create()
+        self._swap_chain.create_image_views()
 
     def _create_instance(self):
         # Vulkan app info - capital V indicates creation of C struct
@@ -270,6 +271,7 @@ class SwapChain:
         self.extent = None
         self._handle = None
         self._images = None
+        self._image_views = []
 
     def create(self):
         self.surface_format = SwapChain._choose_surface_format(self._support_details.formats)
@@ -307,7 +309,29 @@ class SwapChain:
         self._handle = vkCreateSwapchainKHR(self._app.device, create_info, None)
         self._images = vkGetSwapchainImagesKHR(self._app.device, self._handle)
 
+    def create_image_views(self):
+        for image in self._images:
+            image_view_create_info = VkImageViewCreateInfo(
+                image=image,
+                viewType=VK_IMAGE_VIEW_TYPE_2D,
+                format=self.surface_format.format,
+                components=VkComponentMapping(VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY),
+                subresourceRange=VkImageSubresourceRange(
+                    aspectMask=VK_IMAGE_ASPECT_COLOR_BIT,
+                    baseMipLevel=0,
+                    levelCount=1,
+                    baseArrayLayer=0,
+                    layerCount=1,
+                ),
+            )
+
+            image_view = vkCreateImageView(self._app.device, image_view_create_info, None)
+            self._image_views.append(image_view)
+
     def cleanup(self):
+        for view in self._image_views:
+            vkDestroyImageView(self._app.device, view)
+
         vkDestroySwapchainKHR(self._app.device, self._handle, None)
 
     @staticmethod
