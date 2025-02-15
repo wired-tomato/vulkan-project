@@ -12,7 +12,7 @@ def main():
 
     vk_app = VkApp(window)
     # required vulkan SDK - https://vulkan.lunarg.com/
-    vk_app.validation_layer("VK_LAYER_KHRONOS_validation")
+    vk_app.default_validation_layers()
     vk_app.enable_validation() # comment out this line to run without validation enabled, removes vulkan SDK dependency
     vk_app.init()
 
