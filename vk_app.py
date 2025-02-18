@@ -1,8 +1,8 @@
 from vulkan import *
 import glfw
 
-from vk_ext import vkCreateDebugUtilsMessengerEXT, vkDestroyDebugUtilsMessengerEXT
-from vk_khr import *
+from vulkan_extensions.vk_ext import *
+from vulkan_extensions.vk_khr import *
 from windowing import Window
 
 
@@ -330,7 +330,7 @@ class SwapChain:
 
     def cleanup(self):
         for view in self._image_views:
-            vkDestroyImageView(self._app.device, view)
+            vkDestroyImageView(self._app.device, view, None)
 
         vkDestroySwapchainKHR(self._app.device, self._handle, None)
 

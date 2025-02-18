@@ -1,10 +1,15 @@
 import glfw
 
+from resources import Resources
+from resources.shaders import ShaderLoader
 from vk_app import VkApp
 from windowing import Window
 
 
 def main():
+    Resources.register_loader(ShaderLoader())
+    Resources.load()
+
     glfw.init()
     window = Window(800, 800, "title")
     window.hint(glfw.CLIENT_API, glfw.NO_API)
