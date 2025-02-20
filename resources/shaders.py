@@ -1,7 +1,7 @@
 import enum
 from pathlib import Path
 
-from vulkan import VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT
+from graphics.vulkan import VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT
 
 from resources import ResourceLoader
 

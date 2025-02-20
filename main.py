@@ -2,7 +2,7 @@ import glfw
 
 from resources import Resources
 from resources.shaders import ShaderLoader
-from vk_app import VkApp
+from graphics.vk_app import VkApp
 from windowing import Window
 
 

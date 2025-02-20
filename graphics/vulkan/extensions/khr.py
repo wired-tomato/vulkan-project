@@ -1,4 +1,4 @@
-from vulkan import vkGetInstanceProcAddr, vkGetDeviceProcAddr
+from graphics.vulkan import vkGetInstanceProcAddr, vkGetDeviceProcAddr
 
 
 def vkDestroySurfaceKHR(instance, surface, allocator):

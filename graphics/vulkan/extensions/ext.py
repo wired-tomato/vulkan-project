@@ -1,4 +1,4 @@
-from vulkan import vkGetInstanceProcAddr, VK_ERROR_EXTENSION_NOT_PRESENT
+from graphics.vulkan import vkGetInstanceProcAddr, VK_ERROR_EXTENSION_NOT_PRESENT
 
 
 def vkCreateDebugUtilsMessengerEXT(instance, pCreateInfo, pAllocator):
