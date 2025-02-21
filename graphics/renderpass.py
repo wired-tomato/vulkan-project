@@ -38,5 +38,5 @@ class RenderPass:
 
         self.handle = vkCreateRenderPass(self._app.device, create_info, None)
 
-    def cleanup(self):
+    def destroy(self):
         vkDestroyRenderPass(self._app.device, self.handle, None)

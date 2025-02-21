@@ -1,3 +1,4 @@
+from graphics.framebuffer import FrameBuffers
 from graphics.pipeline import GraphicsPipeline
 from graphics.renderpass import RenderPass
 from graphics.swapchain import *
@@ -30,6 +31,7 @@ class VkApp:
         self.render_pass = RenderPass(self)
         self._shaders = Resources.get_loader(ShaderLoader)
         self.pipeline = GraphicsPipeline(self, { ShaderType.VERTEX: self._shaders.default_vertex, ShaderType.FRAGMENT: self._shaders.default_frag })
+        self.frame_buffers = FrameBuffers(self)
         self._debug_messenger = None
 
     def init(self):
@@ -41,6 +43,8 @@ class VkApp:
         self.swap_chain.create()
         self.swap_chain.create_image_views()
         self.render_pass.create()
+        self.frame_buffers.create()
+        self.pipeline.create()
 
     def _create_instance(self):
         # Vulkan app info - capital V indicates creation of C struct
@@ -263,13 +267,16 @@ class VkApp:
         self._device_extensions.append(extension)
 
     def cleanup(self):
+        self.pipeline.destroy()
+        self.frame_buffers.destroy()
+        self.render_pass.destroy()
+        self.swap_chain.destroy()
+        vkDestroyDevice(self.device, None)
+        vkDestroySurfaceKHR(self.instance, self.surface, None)
+
         if self._enable_validation:
             vkDestroyDebugUtilsMessengerEXT(self.instance, self._debug_messenger, None)
 
-        self.render_pass.cleanup()
-        self.swap_chain.cleanup()
-        vkDestroyDevice(self.device, None)
-        vkDestroySurfaceKHR(self.instance, self.surface, None)
         vkDestroyInstance(self.instance, None)
 
 class QueueFamilyIndices:

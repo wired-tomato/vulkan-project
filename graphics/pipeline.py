@@ -10,7 +10,7 @@ class GraphicsPipeline:
         self._layout = None
         self._handle = None
 
-    def init(self):
+    def create(self):
         modules = []
         stages = []
 
@@ -140,7 +140,7 @@ class GraphicsPipeline:
         self._handle = vkCreateGraphicsPipelines(self._app.device, VK_NULL_HANDLE, 1, [create_info], None)[0]
 
         for module in modules:
-            vkDestroyShaderModule(self._app, module, None)
+            vkDestroyShaderModule(self._app.device, module, None)
 
     def _create_shader_module(self, shader: Shader):
         create_info = VkShaderModuleCreateInfo(
@@ -150,6 +150,6 @@ class GraphicsPipeline:
 
         return vkCreateShaderModule(self._app.device, create_info, None)
 
-    def cleanup(self):
+    def destroy(self):
         vkDestroyPipeline(self._app.device, self._handle, None)
         vkDestroyPipelineLayout(self._app.device, self._layout, None)
