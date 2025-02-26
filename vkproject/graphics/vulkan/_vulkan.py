@@ -2,7 +2,7 @@ from collections.abc import Iterable
 import weakref as _weakref
 import sys
 
-from graphics.vulkan._vulkancache import ffi
+from vkproject.graphics.vulkan._vulkancache import ffi
 
 
 _weakkey_dict = _weakref.WeakKeyDictionary()

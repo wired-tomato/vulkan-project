@@ -1,9 +1,9 @@
 import glfw
 
-from resources import Resources
-from resources.shaders import ShaderLoader
-from graphics.vk_app import VkApp
-from windowing import Window
+from vkproject.graphics.vk_app import VkApp
+from vkproject.resources import Resources
+from vkproject.resources.shaders import ShaderLoader
+from vkproject.windowing import Window
 
 
 def main():

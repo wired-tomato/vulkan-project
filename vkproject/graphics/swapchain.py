@@ -1,7 +1,7 @@
-from graphics.vulkan import *
-from graphics.vulkan.extensions.khr import *
-
 import glfw
+
+from vkproject.graphics.vulkan import *
+from vkproject.graphics.vulkan.extensions.khr import *
 
 
 class SwapChainSupportDetails:

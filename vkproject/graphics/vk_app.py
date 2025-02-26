@@ -1,15 +1,17 @@
-from graphics.framebuffer import FrameBuffers
-from graphics.pipeline import GraphicsPipeline
-from graphics.renderpass import RenderPass
-from graphics.swapchain import *
-from graphics.vulkan import *
-from graphics.vulkan.extensions.ext import *
-from graphics.vulkan.extensions.khr import *
+from vkproject.graphics.commands import CommandPool, CommandBuffer
+from vkproject.graphics.framebuffer import FrameBuffers
+from vkproject.graphics.pipeline import GraphicsPipeline
+from vkproject.graphics.rendering import BufferRenderer
+from vkproject.graphics.renderpass import RenderPass
 import glfw
 
-from resources import Resources
-from resources.shaders import ShaderType, ShaderLoader
-from windowing import Window
+from vkproject.graphics.swapchain import SwapChain, SwapChainSupportDetails
+from vkproject.graphics.vulkan import *
+from vkproject.graphics.vulkan.extensions.ext import *
+from vkproject.graphics.vulkan.extensions.khr import *
+from vkproject.resources import Resources
+from vkproject.resources.shaders import ShaderType, ShaderLoader
+from vkproject.windowing import Window
 
 
 class VkApp:
@@ -32,6 +34,8 @@ class VkApp:
         self._shaders = Resources.get_loader(ShaderLoader)
         self.pipeline = GraphicsPipeline(self, { ShaderType.VERTEX: self._shaders.default_vertex, ShaderType.FRAGMENT: self._shaders.default_frag })
         self.frame_buffers = FrameBuffers(self)
+        self.command_pool = None
+        self.command_buffer = None
         self._debug_messenger = None
 
     def init(self):
@@ -40,11 +44,15 @@ class VkApp:
         self._create_surface()
         self._select_physical_device()
         self._create_logical_device()
+        self.command_pool = CommandPool(self.device, self.queue_family_indices.graphics_family)
         self.swap_chain.create()
         self.swap_chain.create_image_views()
         self.render_pass.create()
         self.frame_buffers.create()
         self.pipeline.create()
+        self.command_pool.create()
+        self.command_buffer = CommandBuffer(self.device, self.command_pool)
+        self.command_buffer.create()
 
     def _create_instance(self):
         # Vulkan app info - capital V indicates creation of C struct
@@ -108,6 +116,8 @@ class VkApp:
             return "WARNING"
         elif bit == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
             return "ERROR"
+        else:
+            return None
 
     @staticmethod
     def _type(bit):
@@ -117,6 +127,8 @@ class VkApp:
             return "VALIDATION"
         elif bit == VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
             return "PERFORMANCE"
+        else:
+            return None
 
     def _select_physical_device(self):
         #returns list of all physical devices (with vulkan support) on the system
@@ -173,6 +185,15 @@ class VkApp:
         glfw.create_window_surface(self.instance, self.window.handle(), None, surface_ptr)
         # deref the ptr
         self.surface = surface_ptr[0]
+
+    def record_command_buffer(self, image_idx):
+        self.command_buffer.begin_recording()
+        self.render_pass.begin(self.command_buffer, self.frame_buffers, image_idx)
+        renderer = BufferRenderer(self.command_buffer)
+        renderer.bind_pipeline(self.pipeline)
+        renderer.sample_render(self.swap_chain)
+        self.render_pass.end(self.command_buffer)
+        self.command_buffer.end_recording()
 
     def _find_queue_families(self, device):
         queue_families = vkGetPhysicalDeviceQueueFamilyProperties(device)
@@ -267,6 +288,7 @@ class VkApp:
         self._device_extensions.append(extension)
 
     def cleanup(self):
+        self.command_pool.destroy()
         self.pipeline.destroy()
         self.frame_buffers.destroy()
         self.render_pass.destroy()

@@ -1,9 +1,9 @@
 import enum
 from pathlib import Path
 
-from graphics.vulkan import VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT
+from vkproject.graphics.vulkan import VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT
 
-from resources import ResourceLoader
+from vkproject.resources import ResourceLoader
 
 
 class ShaderType(enum.Enum):
@@ -13,7 +13,7 @@ class ShaderType(enum.Enum):
     def stage(self):
         if self == ShaderType.VERTEX:
             return VK_SHADER_STAGE_VERTEX_BIT
-        elif self == ShaderType.FRAGMENT:
+        else:
             return VK_SHADER_STAGE_FRAGMENT_BIT
 
 class Shader:

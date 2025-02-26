@@ -1,6 +1,5 @@
-from graphics.vulkan import *
-
-from resources.shaders import Shader, ShaderType
+from vkproject.graphics.vulkan import *
+from vkproject.resources.shaders import Shader, ShaderType
 
 
 class GraphicsPipeline:
@@ -8,7 +7,7 @@ class GraphicsPipeline:
         self._app = app
         self._shaders = shaders
         self._layout = None
-        self._handle = None
+        self.handle = None
 
     def create(self):
         modules = []
@@ -137,7 +136,7 @@ class GraphicsPipeline:
             basePipelineIndex=-1
         )
 
-        self._handle = vkCreateGraphicsPipelines(self._app.device, VK_NULL_HANDLE, 1, [create_info], None)[0]
+        self.handle = vkCreateGraphicsPipelines(self._app.device, VK_NULL_HANDLE, 1, [create_info], None)[0]
 
         for module in modules:
             vkDestroyShaderModule(self._app.device, module, None)
@@ -151,5 +150,5 @@ class GraphicsPipeline:
         return vkCreateShaderModule(self._app.device, create_info, None)
 
     def destroy(self):
-        vkDestroyPipeline(self._app.device, self._handle, None)
+        vkDestroyPipeline(self._app.device, self.handle, None)
         vkDestroyPipelineLayout(self._app.device, self._layout, None)

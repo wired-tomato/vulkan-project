@@ -1,4 +1,4 @@
-from graphics.vulkan import *
+from vkproject.graphics.vulkan import *
 
 
 class RenderPass:
@@ -37,6 +37,23 @@ class RenderPass:
         )
 
         self.handle = vkCreateRenderPass(self._app.device, create_info, None)
+
+    def begin(self, command_buffer, frame_buffers, image_idx):
+        clear_color = VkClearColorValue(float32=[0.0, 0.0, 0.0, 1.0])
+        info = VkRenderPassBeginInfo(
+            renderPass=self.handle,
+            framebuffer=frame_buffers.handles[image_idx],
+            renderArea=VkRect2D(
+                offset=VkOffset2D(0.0, 0.0),
+                extent=self._app.swap_chain.extent
+            ),
+            pClearValues=[clear_color],
+        )
+
+        vkCmdBeginRenderPass(command_buffer.handle, info, VK_SUBPASS_CONTENTS_INLINE)
+
+    def end(self, command_buffer):
+        vkCmdEndRenderPass(command_buffer.handle)
 
     def destroy(self):
         vkDestroyRenderPass(self._app.device, self.handle, None)
