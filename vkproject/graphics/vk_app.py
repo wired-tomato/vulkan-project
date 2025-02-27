@@ -16,6 +16,8 @@ from vkproject.windowing import Window
 
 
 class VkApp:
+    MAX_FRAMES_IN_FLIGHT = 2
+
     def __init__(self, window: Window):
         # window will be needed later in surface creation
         self.window = window
@@ -33,30 +35,28 @@ class VkApp:
         self.swap_chain = None
         self.render_pass = RenderPass(self)
         self._shaders = Resources.get_loader(ShaderLoader)
-        self.pipeline = GraphicsPipeline(self, { ShaderType.VERTEX: self._shaders.default_vertex, ShaderType.FRAGMENT: self._shaders.default_frag })
-        self.frame_buffers = FrameBuffers(self)
-        self.sync_handler = None
+        self.pipeline = None
+        self.frame_buffers = None
         self.command_pool = None
-        self.command_buffer = None
         self._debug_messenger = None
+        self.current_frame = 0
 
     def init(self):
         self._create_instance()
         self._setup_debug_messenger()
         self._create_surface()
-        self._select_physical_device()
+        support_details = self._select_physical_device()
         self._create_logical_device()
         self.command_pool = CommandPool(self.device, self.queue_family_indices.graphics_family)
-        self.sync_handler = SyncHandler(self.device)
+        self.command_pool.create()
+        self.swap_chain = SwapChain(support_details, self.window, self.surface, self.queue_family_indices, self.device, self.command_pool, self.render_pass, VkApp.MAX_FRAMES_IN_FLIGHT)
         self.swap_chain.create()
         self.swap_chain.create_image_views()
         self.render_pass.create()
+        self.frame_buffers = FrameBuffers(self.device, self.render_pass, self.swap_chain)
         self.frame_buffers.create()
+        self.pipeline = GraphicsPipeline(self, { ShaderType.VERTEX: self._shaders.default_vertex, ShaderType.FRAGMENT: self._shaders.default_frag })
         self.pipeline.create()
-        self.command_pool.create()
-        self.command_buffer = CommandBuffer(self.device, self.command_pool)
-        self.command_buffer.create()
-        self.sync_handler.create()
 
     def _create_instance(self):
         # Vulkan app info - capital V indicates creation of C struct
@@ -138,16 +138,19 @@ class VkApp:
         #returns list of all physical devices (with vulkan support) on the system
         devices = vkEnumeratePhysicalDevices(self.instance)
 
+        details = None
         for device in devices:
             is_suitable, queue_family_indices, support_details = self._is_device_suitable(device)
             if is_suitable:
                 self._physical_device = device
                 self.queue_family_indices = queue_family_indices
-                self.swap_chain = SwapChain(support_details, self)
+                details = support_details
                 break
 
         if not self._physical_device:
             raise RuntimeError("No suitable vulkan devices found")
+
+        return details
 
     def _get_queue_info(self):
         queue_info = []
@@ -190,25 +193,34 @@ class VkApp:
         # deref the ptr
         self.surface = surface_ptr[0]
 
-    def record_command_buffer(self, image_idx):
-        self.command_buffer.begin_recording()
-        self.render_pass.begin(self.command_buffer, self.frame_buffers, image_idx)
-        renderer = BufferRenderer(self.command_buffer)
+    def record_command_buffer(self, buffer, image_idx):
+        buffer.begin_recording()
+        self.render_pass.begin(buffer, self.frame_buffers, image_idx)
+        renderer = BufferRenderer(buffer)
         renderer.bind_pipeline(self.pipeline)
         renderer.sample_render(self.swap_chain)
-        self.render_pass.end(self.command_buffer)
-        self.command_buffer.end_recording()
-        pass
+        self.render_pass.end(buffer)
+        buffer.end_recording()
 
     def draw_frame(self):
-        self.sync_handler.wait_for_fence()
-        image_idx = self.sync_handler.acquire_next_image(self.swap_chain)
-        self.command_buffer.reset()
-        self.record_command_buffer(image_idx)
-        submit_info = self.sync_handler.buffer_submission_info([self.command_buffer.handle], [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT])
-        vkQueueSubmit(self._graphics_queue, 1, [submit_info], self.sync_handler.in_flight_fence)
-        presentation_info = self.sync_handler.presentation_info([self.swap_chain.handle], image_idx)
+        sync_handler = self.swap_chain.get_sync_handler(self.current_frame)
+        sync_handler.wait_for_fence()
+        image_idx = self.swap_chain.acquire(self.current_frame, self.frame_buffers)
+        if image_idx is None:
+            return
+
+        sync_handler.reset_fence()
+
+        command_buffer = self.swap_chain.get_buffer(image_idx)
+
+        command_buffer.reset()
+        self.record_command_buffer(command_buffer, image_idx)
+        submit_info = sync_handler.buffer_submission_info([command_buffer.handle], [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT])
+        vkQueueSubmit(self._graphics_queue, 1, [submit_info], sync_handler.in_flight_fence)
+        presentation_info = sync_handler.presentation_info([self.swap_chain.handle], image_idx)
         vkQueuePresentKHR(self.device, self._present_queue, presentation_info)
+
+        self.current_frame = (self.current_frame + 1) % VkApp.MAX_FRAMES_IN_FLIGHT
 
     def _find_queue_families(self, device):
         queue_families = vkGetPhysicalDeviceQueueFamilyProperties(device)
@@ -304,7 +316,6 @@ class VkApp:
 
     def cleanup(self):
         SyncHandler.wait_idle(self.device)
-        self.sync_handler.destroy()
         self.command_pool.destroy()
         self.pipeline.destroy()
         self.frame_buffers.destroy()

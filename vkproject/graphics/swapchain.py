@@ -1,5 +1,7 @@
 import glfw
 
+from vkproject.graphics.framebuffer import FrameBuffers
+from vkproject.graphics.synchronization import SyncHandler
 from vkproject.graphics.vulkan import *
 from vkproject.graphics.vulkan.extensions.khr import *
 
@@ -11,34 +13,43 @@ class SwapChainSupportDetails:
         self.presentModes = None
 
 class SwapChain:
-    def __init__(self, support_details: SwapChainSupportDetails, app):
+    def __init__(self, support_details: SwapChainSupportDetails, window, surface, queue_family_indices, device, command_pool, render_pass, max_frames_in_flight):
         self._support_details = support_details
-        self._app = app
+        self.window = window
+        self.surface = surface
+        self.queue_family_indices = queue_family_indices
+        self.device = device
+        self.command_pool = command_pool
+        self.render_pass = render_pass
+
         self.surface_format = None
         self.present_mode = None
         self.extent = None
         self.handle = None
         self._images = None
         self.image_views = []
+        self.frames_in_flight = max_frames_in_flight
+        self.command_buffers = []
+        self.sync_handlers = [SyncHandler(device) for _ in range(max_frames_in_flight)]
 
     def create(self):
         self.surface_format = SwapChain._choose_surface_format(self._support_details.formats)
         self.present_mode = SwapChain._choose_present_mode(self._support_details.presentModes)
-        self.extent = SwapChain._choose_extent(self._support_details.capabilities, self._app.window)
+        self.extent = SwapChain._choose_extent(self._support_details.capabilities, self.window)
         # requesting the minimum usually leaves you waiting on the driver for more images to render to
         image_count = self._support_details.capabilities.minImageCount + 1
         if 0 < self._support_details.capabilities.maxImageCount < image_count:
             image_count = self._support_details.capabilities.maxImageCount
 
-        if self._app.queue_family_indices.graphics_family != self._app.queue_family_indices.present_family:
+        if self.queue_family_indices.graphics_family != self.queue_family_indices.present_family:
             image_sharing_mode = VK_SHARING_MODE_CONCURRENT
-            queue_family_indices = list(self._app.queue_family_indices.unique_indices())
+            queue_family_indices = list(self.queue_family_indices.unique_indices())
         else:
             image_sharing_mode = VK_SHARING_MODE_EXCLUSIVE
             queue_family_indices = None
 
         create_info = VkSwapchainCreateInfoKHR(
-            surface=self._app.surface,
+            surface=self.surface,
             minImageCount=image_count,
             imageFormat=self.surface_format.format,
             imageColorSpace=self.surface_format.colorSpace,
@@ -54,8 +65,12 @@ class SwapChain:
             oldSwapchain=VK_NULL_HANDLE
         )
 
-        self.handle = vkCreateSwapchainKHR(self._app.device, create_info, None)
-        self._images = vkGetSwapchainImagesKHR(self._app.device, self.handle)
+        self.handle = vkCreateSwapchainKHR(self.device, create_info, None)
+        self._images = vkGetSwapchainImagesKHR(self.device, self.handle)
+
+        self.command_buffers = self.command_pool.create_command_buffers(self.frames_in_flight)
+        for sync_handler in self.sync_handlers:
+            sync_handler.create()
 
     def create_image_views(self):
         for image in self._images:
@@ -73,14 +88,40 @@ class SwapChain:
                 ),
             )
 
-            image_view = vkCreateImageView(self._app.device, image_view_create_info, None)
+            image_view = vkCreateImageView(self.device, image_view_create_info, None)
             self.image_views.append(image_view)
 
-    def destroy(self):
-        for view in self.image_views:
-            vkDestroyImageView(self._app.device, view, None)
+    def recreate(self, frame_buffers):
+        SyncHandler.wait_idle(self.device)
+        self.destroy()
+        frame_buffers.destroy()
+        self.create()
+        self.create_image_views()
+        frame_buffers.create()
 
-        vkDestroySwapchainKHR(self._app.device, self.handle, None)
+    def acquire(self, frame, frame_buffers):
+        try:
+            return vkAcquireNextImageKHR(self.device, self.handle, UINT64_MAX, self.sync_handlers[frame].image_available_semaphore, VK_NULL_HANDLE)
+        except (VkErrorOutOfDateKhr, VkSuboptimalKhr) as _:
+            self.recreate(frame_buffers)
+            return None
+
+    def get_buffer(self, frame):
+        return self.command_buffers[frame]
+
+    def get_sync_handler(self, frame):
+        return self.sync_handlers[frame]
+
+    def destroy(self):
+        for sync_handler in self.sync_handlers:
+            sync_handler.destroy()
+
+        for view in self.image_views:
+            vkDestroyImageView(self.device, view, None)
+
+        self.image_views = []
+
+        vkDestroySwapchainKHR(self.device, self.handle, None)
 
     @staticmethod
     def _choose_surface_format(available_formats):

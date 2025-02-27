@@ -11,14 +11,13 @@ class SyncHandler:
 
     def create(self):
         semaphore_info = VkSemaphoreCreateInfo()
-        fence_info = VkFenceCreateInfo()
+        fence_info = VkFenceCreateInfo(
+            flags=VK_FENCE_CREATE_SIGNALED_BIT
+        )
 
         self.image_available_semaphore = vkCreateSemaphore(self.device, semaphore_info, None)
         self.render_finished_semaphore = vkCreateSemaphore(self.device, semaphore_info, None)
         self.in_flight_fence = vkCreateFence(self.device, fence_info, None)
-
-    def acquire_next_image(self, swap_chain):
-        return vkAcquireNextImageKHR(self.device, swap_chain.handle, UINT64_MAX, self.image_available_semaphore, VK_NULL_HANDLE)
 
     def buffer_submission_info(self, buffer_handles, wait_stages):
         return VkSubmitInfo(
@@ -30,7 +29,7 @@ class SyncHandler:
 
     def presentation_info(self, swap_chain_handles, image_idx):
         return VkPresentInfoKHR(
-            pWaitSemaphores=[self.image_available_semaphore],
+            pWaitSemaphores=[self.render_finished_semaphore],
             pSwapchains=swap_chain_handles,
             pImageIndices=[image_idx],
             pResults=None
@@ -41,10 +40,9 @@ class SyncHandler:
         vkDeviceWaitIdle(device)
 
     def wait_for_fence(self):
-        try:
-            vkWaitForFences(self.device, 1, [self.in_flight_fence], VK_TRUE, UINT64_MAX)
-        except VkTimeout:
-            print("VkWaitForFences timeout")
+        vkWaitForFences(self.device, 1, [self.in_flight_fence], VK_TRUE, UINT64_MAX)
+
+    def reset_fence(self):
         vkResetFences(self.device, 1, [self.in_flight_fence])
 
     def destroy(self):

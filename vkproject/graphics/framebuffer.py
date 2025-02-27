@@ -2,23 +2,26 @@ from vkproject.graphics.vulkan import VkFramebufferCreateInfo, vkCreateFramebuff
 
 
 class FrameBuffers:
-    def __init__(self, app):
-        self._app = app
+    def __init__(self, device, render_pass, swap_chain):
+        self.device = device
+        self.render_pass = render_pass
+        self.swap_chain = swap_chain
         self.handles = []
 
     def create(self):
-        for image_view in self._app.swap_chain.image_views:
+        for image_view in self.swap_chain.image_views:
             create_info = VkFramebufferCreateInfo(
-                renderPass=self._app.render_pass.handle,
+                renderPass=self.render_pass.handle,
                 attachmentCount=1,
                 pAttachments=[image_view],
-                width=self._app.swap_chain.extent.width,
-                height=self._app.swap_chain.extent.height,
+                width=self.swap_chain.extent.width,
+                height=self.swap_chain.extent.height,
                 layers=1
             )
-            handle = vkCreateFramebuffer(self._app.device, create_info, None)
+            handle = vkCreateFramebuffer(self.device, create_info, None)
             self.handles.append(handle)
 
     def destroy(self):
         for handle in self.handles:
-            vkDestroyFramebuffer(self._app.device, handle, None)
+            vkDestroyFramebuffer(self.device, handle, None)
+        self.handles = []
