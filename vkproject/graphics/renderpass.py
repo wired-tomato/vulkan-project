@@ -1,14 +1,16 @@
 from vkproject.graphics.vulkan import *
+from vkproject.math import Vec2
 
 
 class RenderPass:
-    def __init__(self, app):
-        self._app = app
+    def __init__(self, device, swap_chain):
+        self.device = device
+        self.swap_chain = swap_chain
         self.handle = None
 
     def create(self):
         color_attachment = VkAttachmentDescription(
-            format=self._app.swap_chain.surface_format.format,
+            format=self.swap_chain.surface_format.format,
             samples=VK_SAMPLE_COUNT_1_BIT,
             loadOp=VK_ATTACHMENT_LOAD_OP_CLEAR, # clear existing values in attachment
             storeOp=VK_ATTACHMENT_STORE_OP_STORE, # rendered contents will be stored in memory and can be read later
@@ -47,7 +49,7 @@ class RenderPass:
             pDependencies=[subpass_dependency],
         )
 
-        self.handle = vkCreateRenderPass(self._app.device, create_info, None)
+        self.handle = vkCreateRenderPass(self.device, create_info, None)
 
     def begin(self, command_buffer, frame_buffers, image_idx):
         clear_color = VkClearColorValue(float32=[0.0, 0.0, 0.0, 1.0])
@@ -57,7 +59,7 @@ class RenderPass:
             framebuffer=frame_buffers.handles[image_idx],
             renderArea=VkRect2D(
                 offset=VkOffset2D(0.0, 0.0),
-                extent=self._app.swap_chain.extent
+                extent=self.swap_chain.extent
             ),
             clearValueCount=1,
             pClearValues=[clear_value],
@@ -69,4 +71,4 @@ class RenderPass:
         vkCmdEndRenderPass(command_buffer.handle)
 
     def destroy(self):
-        vkDestroyRenderPass(self._app.device, self.handle, None)
+        vkDestroyRenderPass(self.device, self.handle, None)
