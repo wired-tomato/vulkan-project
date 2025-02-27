@@ -1,11 +1,11 @@
-from vkproject.graphics.commands import CommandPool, CommandBuffer
+from vkproject.graphics.commands import CommandPool
 from vkproject.graphics.framebuffer import FrameBuffers
 from vkproject.graphics.pipeline import GraphicsPipeline
 from vkproject.graphics.rendering import BufferRenderer
 from vkproject.graphics.renderpass import RenderPass
 import glfw
 
-from vkproject.graphics.swapchain import SwapChain, SwapChainSupportDetails
+from vkproject.graphics.swapchain import SwapChain
 from vkproject.graphics.synchronization import SyncHandler
 from vkproject.graphics.vulkan import *
 from vkproject.graphics.vulkan.extensions.ext import *
@@ -33,7 +33,7 @@ class VkApp:
         self._graphics_queue = None
         self._present_queue = None
         self.swap_chain = None
-        self.render_pass = RenderPass(self)
+        self.render_pass = None
         self._shaders = Resources.get_loader(ShaderLoader)
         self.pipeline = None
         self.frame_buffers = None
@@ -45,13 +45,14 @@ class VkApp:
         self._create_instance()
         self._setup_debug_messenger()
         self._create_surface()
-        support_details = self._select_physical_device()
+        self._select_physical_device()
         self._create_logical_device()
         self.command_pool = CommandPool(self.device, self.queue_family_indices.graphics_family)
         self.command_pool.create()
-        self.swap_chain = SwapChain(support_details, self.window, self.surface, self.queue_family_indices, self.device, self.command_pool, self.render_pass, VkApp.MAX_FRAMES_IN_FLIGHT)
+        self.swap_chain = SwapChain(self.instance, self._physical_device, self.window, self.surface, self.queue_family_indices, self.device, self.command_pool, self.render_pass, VkApp.MAX_FRAMES_IN_FLIGHT)
         self.swap_chain.create()
         self.swap_chain.create_image_views()
+        self.render_pass = RenderPass(self.device, self.swap_chain)
         self.render_pass.create()
         self.frame_buffers = FrameBuffers(self.device, self.render_pass, self.swap_chain)
         self.frame_buffers.create()
@@ -138,19 +139,15 @@ class VkApp:
         #returns list of all physical devices (with vulkan support) on the system
         devices = vkEnumeratePhysicalDevices(self.instance)
 
-        details = None
         for device in devices:
-            is_suitable, queue_family_indices, support_details = self._is_device_suitable(device)
+            is_suitable, queue_family_indices = self._is_device_suitable(device)
             if is_suitable:
                 self._physical_device = device
                 self.queue_family_indices = queue_family_indices
-                details = support_details
                 break
 
         if not self._physical_device:
             raise RuntimeError("No suitable vulkan devices found")
-
-        return details
 
     def _get_queue_info(self):
         queue_info = []
@@ -238,28 +235,19 @@ class VkApp:
 
         return queue_family_indices
 
-    def _query_swap_chain_support_details(self, device):
-        details = SwapChainSupportDetails()
-        details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(self.instance, device, self.surface)
-        details.formats = vkGetPhysicalDeviceSurfaceFormatsKHR(self.instance, device, self.surface)
-        details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(self.instance, device, self.surface)
-
-        return details
-
     def _is_device_suitable(self, device):
         #find required indices
         queue_family_indices = self._find_queue_families(device)
         supports_extensions = self._check_device_extension_support(device)
 
         adequate_swap_chain = False
-        swap_chain_support_details = None
         if supports_extensions:
-            swap_chain_support_details = self._query_swap_chain_support_details(device)
+            swap_chain_support_details = SwapChain.query_swap_chain_support_details(self.instance, device, self.surface)
             adequate_swap_chain = len(swap_chain_support_details.formats) > 0 and len(swap_chain_support_details.presentModes) > 0
 
 
         #return queue family indices and swap chain support details so that they don't have to be requeried later
-        return (queue_family_indices.is_complete() and supports_extensions and adequate_swap_chain), queue_family_indices, swap_chain_support_details
+        return (queue_family_indices.is_complete() and supports_extensions and adequate_swap_chain), queue_family_indices
 
     def _check_device_extension_support(self, device):
         supported_extensions = vkEnumerateDeviceExtensionProperties(device, None)

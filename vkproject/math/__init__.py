@@ -22,6 +22,9 @@ class Vec2:
             height=self.y,
         )
 
+    def __str__(self):
+        return f'Vec2({self.x}, {self.y})'
+
 class Rect2D:
     def __init__(self, pos: Vec2, size: Vec2):
         self.pos = pos

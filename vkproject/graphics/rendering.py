@@ -18,7 +18,8 @@ class BufferRenderer:
         vkCmdSetScissor(self.buffer.handle, 0, 1, [vk_rect])
 
     def no_scissor(self, swap_chain):
-        self.set_scissor(Rect2D(Vec2(0, 0), Vec2.from_vk_extent(swap_chain.extent)))
+        ext = Vec2.from_vk_extent(swap_chain.extent)
+        self.set_scissor(Rect2D(Vec2(0, 0), ext))
 
     def draw(self, vertex_count, instance_count, first_vertex, first_instance):
         vkCmdDraw(self.buffer.handle, vertex_count, instance_count, first_vertex, first_instance)

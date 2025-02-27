@@ -1,4 +1,5 @@
 from vkproject.graphics.vulkan import VkFramebufferCreateInfo, vkCreateFramebuffer, vkDestroyFramebuffer
+from vkproject.math import Vec2
 
 
 class FrameBuffers:

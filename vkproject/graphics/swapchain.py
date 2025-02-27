@@ -1,9 +1,9 @@
 import glfw
 
-from vkproject.graphics.framebuffer import FrameBuffers
 from vkproject.graphics.synchronization import SyncHandler
 from vkproject.graphics.vulkan import *
 from vkproject.graphics.vulkan.extensions.khr import *
+from vkproject.math import Vec2
 
 
 class SwapChainSupportDetails:
@@ -13,8 +13,9 @@ class SwapChainSupportDetails:
         self.presentModes = None
 
 class SwapChain:
-    def __init__(self, support_details: SwapChainSupportDetails, window, surface, queue_family_indices, device, command_pool, render_pass, max_frames_in_flight):
-        self._support_details = support_details
+    def __init__(self, instance, physical_device, window, surface, queue_family_indices, device, command_pool, render_pass, max_frames_in_flight):
+        self.instance = instance
+        self.physical_device = physical_device
         self.window = window
         self.surface = surface
         self.queue_family_indices = queue_family_indices
@@ -31,15 +32,17 @@ class SwapChain:
         self.frames_in_flight = max_frames_in_flight
         self.command_buffers = []
         self.sync_handlers = [SyncHandler(device) for _ in range(max_frames_in_flight)]
+        self.support_details = None
 
     def create(self):
-        self.surface_format = SwapChain._choose_surface_format(self._support_details.formats)
-        self.present_mode = SwapChain._choose_present_mode(self._support_details.presentModes)
-        self.extent = SwapChain._choose_extent(self._support_details.capabilities, self.window)
+        self.support_details = SwapChain.query_swap_chain_support_details(self.instance, self.physical_device, self.surface)
+        self.surface_format = SwapChain._choose_surface_format(self.support_details.formats)
+        self.present_mode = SwapChain._choose_present_mode(self.support_details.presentModes)
+        self.extent = SwapChain._choose_extent(self.support_details.capabilities, self.window)
         # requesting the minimum usually leaves you waiting on the driver for more images to render to
-        image_count = self._support_details.capabilities.minImageCount + 1
-        if 0 < self._support_details.capabilities.maxImageCount < image_count:
-            image_count = self._support_details.capabilities.maxImageCount
+        image_count = self.support_details.capabilities.minImageCount + 1
+        if 0 < self.support_details.capabilities.maxImageCount < image_count:
+            image_count = self.support_details.capabilities.maxImageCount
 
         if self.queue_family_indices.graphics_family != self.queue_family_indices.present_family:
             image_sharing_mode = VK_SHARING_MODE_CONCURRENT
@@ -58,7 +61,7 @@ class SwapChain:
             imageUsage=VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             imageSharingMode=image_sharing_mode,
             pQueueFamilyIndices=queue_family_indices,
-            preTransform=self._support_details.capabilities.currentTransform,
+            preTransform=self.support_details.capabilities.currentTransform,
             compositeAlpha=VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             presentMode=self.present_mode,
             clipped=VK_TRUE,
@@ -111,6 +114,16 @@ class SwapChain:
 
     def get_sync_handler(self, frame):
         return self.sync_handlers[frame]
+
+    @staticmethod
+    def query_swap_chain_support_details(instance, device, surface):
+        details = SwapChainSupportDetails()
+        details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(instance, device, surface)
+        details.formats = vkGetPhysicalDeviceSurfaceFormatsKHR(instance, device, surface)
+        details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(instance, device, surface)
+
+        return details
+
 
     def destroy(self):
         for sync_handler in self.sync_handlers:
