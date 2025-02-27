@@ -72,6 +72,7 @@ class GraphicsPipeline:
             polygonMode=VK_POLYGON_MODE_FILL,
             lineWidth=1.0,
             cullMode=VK_CULL_MODE_BACK_BIT,
+            frontFace=VK_FRONT_FACE_CLOCKWISE,
             depthBiasEnable=VK_FALSE,
             depthBiasConstantFactor=0.0,
             depthBiasClamp=0.0,
@@ -91,7 +92,7 @@ class GraphicsPipeline:
         # finalColor.rgb = newAlpha * newColor + (1 - newAlpha) * oldColor;
         # finalColor.a = newAlpha.a;
         color_blend_attachment = VkPipelineColorBlendAttachmentState(
-            colorWriteMask=VK_COLOR_COMPONENT_R_BIT or VK_COLOR_COMPONENT_G_BIT or VK_COLOR_COMPONENT_B_BIT or VK_COLOR_COMPONENT_A_BIT,
+            colorWriteMask=VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
             blendEnable=VK_TRUE,
             srcColorBlendFactor=VK_BLEND_FACTOR_SRC_ALPHA,
             dstColorBlendFactor=VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
