@@ -1,42 +1,25 @@
-import numpy as np
-
 from vkproject.graphics.vulkan import VkViewport, VkRect2D, VkOffset2D, VkExtent2D
 
 
 class Vec2:
     def __init__(self, x, y):
-        self._array = np.array([x, y])
+        self.x = x
+        self.y = y
 
     @staticmethod
     def from_vk_extent(extent):
         return Vec2(extent.width, extent.height)
 
-    @property
-    def x(self):
-        return self._array[0]
-
-    @x.setter
-    def x(self, value):
-        self._array[0] = value
-
-    @property
-    def y(self):
-        return self._array[1]
-
-    @y.setter
-    def y(self, value):
-        self._array[1] = value
-
     def vk_offset_2d(self):
         return VkOffset2D(
-            x=self._array[0],
-            y=self._array[1],
+            x=self.x,
+            y=self.y,
         )
 
     def vk_extent_2d(self):
         return VkExtent2D(
-            width=self._array[0],
-            height=self._array[1],
+            width=self.x,
+            height=self.y,
         )
 
 class Rect2D:

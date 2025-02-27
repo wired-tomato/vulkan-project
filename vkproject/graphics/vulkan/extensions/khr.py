@@ -32,3 +32,11 @@ def vkDestroySwapchainKHR(device, swapchain, allocator):
 def vkGetSwapchainImagesKHR(device, swapchain):
     func = vkGetDeviceProcAddr(device, "vkGetSwapchainImagesKHR")
     return func(device, swapchain)
+
+def vkAcquireNextImageKHR(device, swapchain, timeout, semaphore, fence):
+    func = vkGetDeviceProcAddr(device, "vkAcquireNextImageKHR")
+    return func(device, swapchain, timeout, semaphore, fence)
+
+def vkQueuePresentKHR(device, queue, pPresentInfo):
+    func = vkGetDeviceProcAddr(device, "vkQueuePresentKHR")
+    return func(queue, pPresentInfo)

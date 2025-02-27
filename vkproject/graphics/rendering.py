@@ -24,5 +24,6 @@ class BufferRenderer:
         vkCmdDraw(self.buffer.handle, vertex_count, instance_count, first_vertex, first_instance)
 
     def sample_render(self, swap_chain):
+        self.set_viewport(Viewport(pos=Vec2(0, 0), size=Vec2.from_vk_extent(swap_chain.extent), min_depth=0.0, max_depth=1.0))
         self.no_scissor(swap_chain)
         self.draw(3, 1, 0, 0)

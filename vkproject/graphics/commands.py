@@ -29,6 +29,32 @@ class CommandPool:
 
         self.handle = vkCreateCommandPool(self._device, create_info, None)
 
+    def create_command_buffers(self, n, primary=True):
+        if primary:
+            level = VK_COMMAND_BUFFER_LEVEL_PRIMARY
+        else:
+            level = VK_COMMAND_BUFFER_LEVEL_SECONDARY
+
+        alloc_info = VkCommandBufferAllocateInfo(
+            commandPool=self.handle,
+            level=level,
+            commandBufferCount=n,
+        )
+
+        handles = vkAllocateCommandBuffers(self._device, alloc_info)
+
+        buffers = []
+        for handle in handles:
+            buffer = CommandBuffer(self._device, self, handle)
+            if primary:
+                buffer.primary()
+            else:
+                buffer.secondary()
+
+            buffers.append(buffer)
+
+        return buffers
+
     def destroy(self):
         vkDestroyCommandPool(self._device, self.handle, None)
 
@@ -39,11 +65,11 @@ class CommandBufferRecordingType(enum.Enum):
     SIMULTANEOUS = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
 
 class CommandBuffer:
-    def __init__(self, device, pool):
+    def __init__(self, device, pool, handle=None):
         self._device = device
         self._pool = pool
         self._primary = True
-        self.handle = None
+        self.handle = handle
 
     def primary(self):
         self._primary = True
@@ -63,11 +89,14 @@ class CommandBuffer:
             commandBufferCount=1,
         )
 
-        self.handle = vkAllocateCommandBuffers(self._device, alloc_info)
+        self.handle = vkAllocateCommandBuffers(self._device, alloc_info)[0]
 
     def begin_recording(self, recording_type = CommandBufferRecordingType.NONE):
         begin_info = VkCommandBufferBeginInfo(flags=recording_type.value, pInheritanceInfo=None)
         vkBeginCommandBuffer(self.handle, begin_info)
+
+    def reset(self):
+        vkResetCommandBuffer(self.handle, 0)
 
     def end_recording(self):
         vkEndCommandBuffer(self.handle)
