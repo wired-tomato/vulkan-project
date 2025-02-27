@@ -17,7 +17,7 @@ class SwapChain:
         self.surface_format = None
         self.present_mode = None
         self.extent = None
-        self._handle = None
+        self.handle = None
         self._images = None
         self.image_views = []
 
@@ -54,8 +54,8 @@ class SwapChain:
             oldSwapchain=VK_NULL_HANDLE
         )
 
-        self._handle = vkCreateSwapchainKHR(self._app.device, create_info, None)
-        self._images = vkGetSwapchainImagesKHR(self._app.device, self._handle)
+        self.handle = vkCreateSwapchainKHR(self._app.device, create_info, None)
+        self._images = vkGetSwapchainImagesKHR(self._app.device, self.handle)
 
     def create_image_views(self):
         for image in self._images:
@@ -80,7 +80,7 @@ class SwapChain:
         for view in self.image_views:
             vkDestroyImageView(self._app.device, view, None)
 
-        vkDestroySwapchainKHR(self._app.device, self._handle, None)
+        vkDestroySwapchainKHR(self._app.device, self.handle, None)
 
     @staticmethod
     def _choose_surface_format(available_formats):

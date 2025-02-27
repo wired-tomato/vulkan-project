@@ -23,6 +23,7 @@ def main():
 
     while not window.should_close():
         window.update()
+        vk_app.draw_frame()
 
     glfw.terminate()
     vk_app.cleanup()

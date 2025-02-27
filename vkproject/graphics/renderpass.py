@@ -29,17 +29,29 @@ class RenderPass:
             pColorAttachments=[color_attachment_ref],
         )
 
+        subpass_dependency = VkSubpassDependency(
+            srcSubpass=VK_SUBPASS_EXTERNAL,
+            dstSubpass=0,
+            srcStageMask=VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            srcAccessMask=0,
+            dstStageMask=VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            dstAccessMask=VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        )
+
         create_info = VkRenderPassCreateInfo(
             attachmentCount=1,
             pAttachments=[color_attachment],
             subpassCount=1,
             pSubpasses=[subpass],
+            dependencyCount=1,
+            pDependencies=[subpass_dependency],
         )
 
         self.handle = vkCreateRenderPass(self._app.device, create_info, None)
 
     def begin(self, command_buffer, frame_buffers, image_idx):
         clear_color = VkClearColorValue(float32=[0.0, 0.0, 0.0, 1.0])
+        clear_value = VkClearValue(clear_color)
         info = VkRenderPassBeginInfo(
             renderPass=self.handle,
             framebuffer=frame_buffers.handles[image_idx],
@@ -47,7 +59,8 @@ class RenderPass:
                 offset=VkOffset2D(0.0, 0.0),
                 extent=self._app.swap_chain.extent
             ),
-            pClearValues=[clear_color],
+            clearValueCount=1,
+            pClearValues=[clear_value],
         )
 
         vkCmdBeginRenderPass(command_buffer.handle, info, VK_SUBPASS_CONTENTS_INLINE)

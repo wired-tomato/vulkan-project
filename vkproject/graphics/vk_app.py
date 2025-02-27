@@ -6,6 +6,7 @@ from vkproject.graphics.renderpass import RenderPass
 import glfw
 
 from vkproject.graphics.swapchain import SwapChain, SwapChainSupportDetails
+from vkproject.graphics.synchronization import SyncHandler
 from vkproject.graphics.vulkan import *
 from vkproject.graphics.vulkan.extensions.ext import *
 from vkproject.graphics.vulkan.extensions.khr import *
@@ -34,6 +35,7 @@ class VkApp:
         self._shaders = Resources.get_loader(ShaderLoader)
         self.pipeline = GraphicsPipeline(self, { ShaderType.VERTEX: self._shaders.default_vertex, ShaderType.FRAGMENT: self._shaders.default_frag })
         self.frame_buffers = FrameBuffers(self)
+        self.sync_handler = None
         self.command_pool = None
         self.command_buffer = None
         self._debug_messenger = None
@@ -45,6 +47,7 @@ class VkApp:
         self._select_physical_device()
         self._create_logical_device()
         self.command_pool = CommandPool(self.device, self.queue_family_indices.graphics_family)
+        self.sync_handler = SyncHandler(self.device)
         self.swap_chain.create()
         self.swap_chain.create_image_views()
         self.render_pass.create()
@@ -53,6 +56,7 @@ class VkApp:
         self.command_pool.create()
         self.command_buffer = CommandBuffer(self.device, self.command_pool)
         self.command_buffer.create()
+        self.sync_handler.create()
 
     def _create_instance(self):
         # Vulkan app info - capital V indicates creation of C struct
@@ -194,6 +198,17 @@ class VkApp:
         renderer.sample_render(self.swap_chain)
         self.render_pass.end(self.command_buffer)
         self.command_buffer.end_recording()
+        pass
+
+    def draw_frame(self):
+        self.sync_handler.wait_for_fence()
+        image_idx = self.sync_handler.acquire_next_image(self.swap_chain)
+        self.command_buffer.reset()
+        self.record_command_buffer(image_idx)
+        submit_info = self.sync_handler.buffer_submission_info([self.command_buffer.handle], [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT])
+        vkQueueSubmit(self._graphics_queue, 1, [submit_info], self.sync_handler.in_flight_fence)
+        presentation_info = self.sync_handler.presentation_info([self.swap_chain.handle], image_idx)
+        vkQueuePresentKHR(self.device, self._present_queue, presentation_info)
 
     def _find_queue_families(self, device):
         queue_families = vkGetPhysicalDeviceQueueFamilyProperties(device)
@@ -288,6 +303,8 @@ class VkApp:
         self._device_extensions.append(extension)
 
     def cleanup(self):
+        SyncHandler.wait_idle(self.device)
+        self.sync_handler.destroy()
         self.command_pool.destroy()
         self.pipeline.destroy()
         self.frame_buffers.destroy()

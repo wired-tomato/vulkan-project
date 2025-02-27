@@ -63,11 +63,14 @@ class CommandBuffer:
             commandBufferCount=1,
         )
 
-        self.handle = vkAllocateCommandBuffers(self._device, alloc_info)
+        self.handle = vkAllocateCommandBuffers(self._device, alloc_info)[0]
 
     def begin_recording(self, recording_type = CommandBufferRecordingType.NONE):
         begin_info = VkCommandBufferBeginInfo(flags=recording_type.value, pInheritanceInfo=None)
         vkBeginCommandBuffer(self.handle, begin_info)
+
+    def reset(self):
+        vkResetCommandBuffer(self.handle, 0)
 
     def end_recording(self):
         vkEndCommandBuffer(self.handle)
