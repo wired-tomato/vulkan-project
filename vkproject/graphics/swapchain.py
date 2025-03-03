@@ -33,6 +33,7 @@ class SwapChain:
         self.command_buffers = []
         self.sync_handlers = [SyncHandler(device) for _ in range(max_frames_in_flight)]
         self.support_details = None
+        self.image_count = 0
 
     def create(self):
         self.support_details = SwapChain.query_swap_chain_support_details(self.instance, self.physical_device, self.surface)
@@ -40,9 +41,9 @@ class SwapChain:
         self.present_mode = SwapChain._choose_present_mode(self.support_details.presentModes)
         self.extent = SwapChain._choose_extent(self.support_details.capabilities, self.window)
         # requesting the minimum usually leaves you waiting on the driver for more images to render to
-        image_count = self.support_details.capabilities.minImageCount + 1
-        if 0 < self.support_details.capabilities.maxImageCount < image_count:
-            image_count = self.support_details.capabilities.maxImageCount
+        self.image_count = self.support_details.capabilities.minImageCount + 1
+        if 0 < self.support_details.capabilities.maxImageCount < self.image_count:
+            self.image_count = self.support_details.capabilities.maxImageCount
 
         if self.queue_family_indices.graphics_family != self.queue_family_indices.present_family:
             image_sharing_mode = VK_SHARING_MODE_CONCURRENT
@@ -53,7 +54,7 @@ class SwapChain:
 
         create_info = VkSwapchainCreateInfoKHR(
             surface=self.surface,
-            minImageCount=image_count,
+            minImageCount=self.image_count,
             imageFormat=self.surface_format.format,
             imageColorSpace=self.surface_format.colorSpace,
             imageExtent=self.extent,

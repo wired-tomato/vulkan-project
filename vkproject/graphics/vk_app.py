@@ -40,6 +40,7 @@ class VkApp:
         self.command_pool = None
         self._debug_messenger = None
         self.current_frame = 0
+        self.frames_in_flight = VkApp.MAX_FRAMES_IN_FLIGHT
 
     def init(self):
         self._create_instance()
@@ -52,6 +53,8 @@ class VkApp:
         self.swap_chain = SwapChain(self.instance, self._physical_device, self.window, self.surface, self.queue_family_indices, self.device, self.command_pool, self.render_pass, VkApp.MAX_FRAMES_IN_FLIGHT)
         self.swap_chain.create()
         self.swap_chain.create_image_views()
+        #Make sure we don't try to render more frames than images we have
+        self.frames_in_flight = min(self.swap_chain.image_count, VkApp.MAX_FRAMES_IN_FLIGHT)
         self.render_pass = RenderPass(self.device, self.swap_chain)
         self.render_pass.create()
         self.frame_buffers = FrameBuffers(self.device, self.render_pass, self.swap_chain)
@@ -218,7 +221,7 @@ class VkApp:
         presentation_info = sync_handler.presentation_info([self.swap_chain.handle], image_idx)
         vkQueuePresentKHR(self.device, self._present_queue, presentation_info)
 
-        self.current_frame = (self.current_frame + 1) % VkApp.MAX_FRAMES_IN_FLIGHT
+        self.current_frame = (self.current_frame + 1) % self.frames_in_flight
 
     def _find_queue_families(self, device):
         queue_families = vkGetPhysicalDeviceQueueFamilyProperties(device)
