@@ -32,12 +32,14 @@ class VkApp:
         self.surface = None
         self._graphics_queue = None
         self._present_queue = None
+        self._transfer_queue = None
         self.swap_chain = None
         self.render_pass = None
         self._shaders = Resources.get_loader(ShaderLoader)
         self.pipeline = None
         self.frame_buffers = None
-        self.command_pool = None
+        self.graphics_command_pool = None
+        self.transfer_command_pool = None
         self._debug_messenger = None
         self.current_frame = 0
 
@@ -47,9 +49,11 @@ class VkApp:
         self._create_surface()
         self._select_physical_device()
         self._create_logical_device()
-        self.command_pool = CommandPool(self.device, self.queue_family_indices.graphics_family)
-        self.command_pool.create()
-        self.swap_chain = SwapChain(self.instance, self._physical_device, self.window, self.surface, self.queue_family_indices, self.device, self.command_pool, self.render_pass, VkApp.MAX_FRAMES_IN_FLIGHT)
+        self.graphics_command_pool = CommandPool(self.device, self.queue_family_indices.graphics_family)
+        self.graphics_command_pool.create()
+        self.transfer_command_pool = CommandPool(self.device, self.queue_family_indices.transfer_family)
+        self.transfer_command_pool.create()
+        self.swap_chain = SwapChain(self.instance, self._physical_device, self.window, self.surface, self.queue_family_indices, self.device, self.graphics_command_pool, self.render_pass, VkApp.MAX_FRAMES_IN_FLIGHT)
         self.swap_chain.create()
         self.swap_chain.create_image_views()
         self.render_pass = RenderPass(self.device, self.swap_chain)
@@ -179,6 +183,7 @@ class VkApp:
         self.device = vkCreateDevice(self._physical_device, device_create_info, None) # VkDevice*
         self._graphics_queue = vkGetDeviceQueue(self.device, self.queue_family_indices.graphics_family, 0)
         self._present_queue = vkGetDeviceQueue(self.device, self.queue_family_indices.present_family, 0)
+        self._transfer_queue = vkGetDeviceQueue(self.device, self.queue_family_indices.transfer_family, 0)
 
     def _create_surface(self):
         # allocate surface ptr to mem using vulkan's FFI obj
@@ -230,6 +235,9 @@ class VkApp:
 
             if vkGetPhysicalDeviceSurfaceSupportKHR(self.instance, device, idx, self.surface) > VK_FALSE:
                 queue_family_indices.present_family = idx
+
+            if queue_family.queueFlags & VK_QUEUE_TRANSFER_BIT != 0:
+                queue_family_indices.transfer_family = idx
 
             idx += 1
 
@@ -304,7 +312,8 @@ class VkApp:
 
     def cleanup(self):
         SyncHandler.wait_idle(self.device)
-        self.command_pool.destroy()
+        self.graphics_command_pool.destroy()
+        self.transfer_command_pool.destroy()
         self.pipeline.destroy()
         self.frame_buffers.destroy()
         self.render_pass.destroy()
@@ -318,15 +327,16 @@ class VkApp:
         vkDestroyInstance(self.instance, None)
 
 class QueueFamilyIndices:
-    def __init__(self, graphics_family=None, present_family=None):
+    def __init__(self, graphics_family=None, present_family=None, transfer_queue=None):
         self.graphics_family = graphics_family
         self.present_family = present_family
+        self.transfer_family = transfer_queue
 
     def indices(self):
-        return [ self.graphics_family, self.present_family ]
+        return [self.graphics_family, self.present_family, self.transfer_family]
 
     def unique_indices(self):
         return set(self.indices())
 
     def is_complete(self) -> bool:
-        return self.graphics_family is not None and self.present_family is not None
+        return self.graphics_family is not None and self.present_family is not None and self.transfer_family is not None

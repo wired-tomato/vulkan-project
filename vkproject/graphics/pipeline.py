@@ -1,3 +1,4 @@
+from vkproject.graphics.vertex import VertexFormats
 from vkproject.graphics.vulkan import *
 from vkproject.resources.shaders import Shader, ShaderType
 
@@ -33,11 +34,17 @@ class GraphicsPipeline:
             pDynamicStates=dynamic_states,
         )
 
+        binding_descriptions = []
+        vertex_attribute_descriptions = []
+        for v_format in VertexFormats:
+            binding_descriptions.append(v_format.value.binding_description())
+            vertex_attribute_descriptions.extend(v_format.value.attribute_descriptions())
+
         vertex_input_info = VkPipelineVertexInputStateCreateInfo(
-            vertexBindingDescriptionCount=0,
-            pVertexBindingDescriptions=None,
-            vertexAttributeDescriptionCount=0,
-            pVertexAttributeDescriptions=None,
+            vertexBindingDescriptionCount=len(binding_descriptions),
+            pVertexBindingDescriptions=binding_descriptions,
+            vertexAttributeDescriptionCount=len(vertex_attribute_descriptions),
+            pVertexAttributeDescriptions=vertex_attribute_descriptions,
         )
 
         input_assembly_info = VkPipelineInputAssemblyStateCreateInfo(
