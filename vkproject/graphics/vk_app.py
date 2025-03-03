@@ -97,12 +97,13 @@ class VkApp:
         self.instance = vkCreateInstance(create_info, None)
 
     def _setup_debug_messenger(self):
-        debug_create_info = VkDebugUtilsMessengerCreateInfoEXT(
-            messageSeverity=VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT,
-            messageType=VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
-            pfnUserCallback=VkApp._debug_callback
-        )
-        self._debug_messenger = vkCreateDebugUtilsMessengerEXT(self.instance, debug_create_info, None)
+        if self._enable_validation:
+            debug_create_info = VkDebugUtilsMessengerCreateInfoEXT(
+                messageSeverity=VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT,
+                messageType=VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+                pfnUserCallback=VkApp._debug_callback
+            )
+            self._debug_messenger = vkCreateDebugUtilsMessengerEXT(self.instance, debug_create_info, None)
 
     @staticmethod
     def _debug_callback(message_severity, message_type, p_callback_data, _):
