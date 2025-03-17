@@ -1,11 +1,6 @@
-import ctypes
-import sys
-
 import glfw
-import numpy
 
 from vkproject.graphics.vk_app import VkApp
-from vkproject.graphics.vulkan import ffi
 from vkproject.resources import Resources
 from vkproject.resources.shaders import ShaderLoader
 from vkproject.windowing import Window

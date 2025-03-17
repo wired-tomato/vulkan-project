@@ -1,0 +1,36 @@
+import re
+from pathlib import Path
+
+from cffi import FFI
+
+ROOT = Path(__file__).parent
+
+ffibuilder = FFI()
+
+with open(Path(ROOT, "volk.cdef.h")) as psrc:
+    data: str = psrc.read()
+
+data = re.sub(r"_Nonnull", "", data)
+data = re.sub(r"_Nullable", "", data)
+
+first_valid_statement = data.index("typedef uint32_t VkBool32;")
+data = data[first_valid_statement:]
+
+ffibuilder.cdef(data)
+
+include_dirs = [Path(ROOT, "../../include").absolute()]
+include_args = [f"-I{x}" for x in include_dirs]
+
+libs = ["volk"]
+
+ffibuilder.set_source(
+    "volk",
+    open(Path(ROOT, "../../include/Volk/volk.h")).read(),
+    libraries=libs,
+    library_dirs=[str(ROOT.absolute()), "C:\\VulkanSDK\\1.4.304.1\\Lib"],
+    source_extension=".cpp",
+    extra_compile_args=include_args,
+)
+
+if __name__ == "__main__":
+    ffibuilder.compile(verbose=True)

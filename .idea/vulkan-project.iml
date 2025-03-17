@@ -3,6 +3,12 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/native-libs/vma/build" />
+      <excludeFolder url="file://$MODULE_DIR$/native-libs/vma/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/native-libs/vma/vma.egg-info" />
+      <excludeFolder url="file://$MODULE_DIR$/native-libs/volk/build" />
+      <excludeFolder url="file://$MODULE_DIR$/native-libs/volk/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/native-libs/volk/volk.egg-info" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (vulkan-project)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
