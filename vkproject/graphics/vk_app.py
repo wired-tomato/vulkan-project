@@ -18,7 +18,7 @@ from vkproject.windowing import Window
 class VkApp:
     MAX_FRAMES_IN_FLIGHT = 2
 
-    def __init__(self, window: Window):
+    def __init__(self, window: Window, instance_creation_callback=None):
         # window will be needed later in surface creation
         self.window = window
         self._validation_layers = []
@@ -42,6 +42,7 @@ class VkApp:
         self.transfer_command_pool = None
         self._debug_messenger = None
         self.current_frame = 0
+        self._instance_creation_callback = instance_creation_callback
 
     def init(self):
         self._create_instance()
@@ -99,6 +100,8 @@ class VkApp:
         )
 
         self.instance = vkCreateInstance(create_info, None)
+        if self._instance_creation_callback:
+            self._instance_creation_callback(self.instance)
 
     def _setup_debug_messenger(self):
         debug_create_info = VkDebugUtilsMessengerCreateInfoEXT(

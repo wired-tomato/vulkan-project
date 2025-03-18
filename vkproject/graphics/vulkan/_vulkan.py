@@ -2,7 +2,8 @@ from collections.abc import Iterable
 import weakref as _weakref
 import sys
 
-from vkproject.graphics.vulkan._vulkancache import ffi
+#use volk ffi & lib
+from volk import ffi, lib
 
 
 _weakkey_dict = _weakref.WeakKeyDictionary()
@@ -97,21 +98,6 @@ def _cast_ptr3(x, _type):
 
 
 _cast_ptr = _cast_ptr3 if PY3 else _cast_ptr2
-
-
-# Load SDK
-_lib_names = ('libvulkan.so.1', 'vulkan-1.dll', 'libvulkan.dylib')
-for name in _lib_names:
-    try:
-        lib = ffi.dlopen(name)
-        break
-    except OSError:
-        pass
-else:
-    raise OSError('Cannot find Vulkan SDK version. Please ensure that it is '
-                  'installed and that the <sdk_root>/<version>/lib/ folder is '
-                  'in the library path')
-
 
 VK_ATTACHMENT_LOAD_OP_LOAD = 0
 VK_ATTACHMENT_LOAD_OP_CLEAR = 1

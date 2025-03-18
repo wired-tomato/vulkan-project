@@ -18,7 +18,7 @@ class SourceModifyingCompilation(build_ext):
 
     def transform_c_code(self, filename, str_max_length=16000):
         print(f"transforming {filename}")
-        """Splits long strings in a C/C++ file to avoid C2026 error."""
+        #Splits long strings in a C/C++ file to avoid C2026 error.
         with open(filename, 'r') as file:
             content = file.read()
 
