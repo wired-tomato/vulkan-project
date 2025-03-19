@@ -1,3 +1,7 @@
+import sys
+
+import volk
+
 from vkproject.graphics.commands import CommandPool
 from vkproject.graphics.framebuffer import FrameBuffers
 from vkproject.graphics.pipeline import GraphicsPipeline
@@ -7,6 +11,7 @@ import glfw
 
 from vkproject.graphics.swapchain import SwapChain
 from vkproject.graphics.synchronization import SyncHandler
+from vkproject.graphics.vma_loader import VmaAllocator
 from vkproject.graphics.vulkan import *
 from vkproject.graphics.vulkan.extensions.ext import *
 from vkproject.graphics.vulkan.extensions.khr import *
@@ -40,9 +45,11 @@ class VkApp:
         self.frame_buffers = None
         self.graphics_command_pool = None
         self.transfer_command_pool = None
+        self.transfer_sync_handler = None
         self._debug_messenger = None
         self.current_frame = 0
         self._instance_creation_callback = instance_creation_callback
+        self.allocator = None
 
     def init(self):
         self._create_instance()
@@ -50,18 +57,52 @@ class VkApp:
         self._create_surface()
         self._select_physical_device()
         self._create_logical_device()
+        self.allocator = VmaAllocator()
+        fn_table = {
+            "vkGetPhysicalDeviceProperties": volk.lib.vkGetPhysicalDeviceProperties,
+            "vkGetPhysicalDeviceMemoryProperties": volk.lib.vkGetPhysicalDeviceMemoryProperties,
+            "vkAllocateMemory": volk.lib.vkAllocateMemory,
+            "vkFreeMemory": volk.lib.vkFreeMemory,
+            "vkMapMemory": volk.lib.vkMapMemory,
+            "vkUnmapMemory": volk.lib.vkUnmapMemory,
+            "vkFlushMappedMemoryRanges": volk.lib.vkFlushMappedMemoryRanges,
+            "vkInvalidateMappedMemoryRanges": volk.lib.vkInvalidateMappedMemoryRanges,
+            "vkBindBufferMemory": volk.lib.vkBindBufferMemory,
+            "vkBindImageMemory": volk.lib.vkBindImageMemory,
+            "vkGetBufferMemoryRequirements": volk.lib.vkGetBufferMemoryRequirements,
+            "vkGetImageMemoryRequirements": volk.lib.vkGetImageMemoryRequirements,
+            "vkCreateBuffer": volk.lib.vkCreateBuffer,
+            "vkDestroyBuffer": volk.lib.vkDestroyBuffer,
+            "vkCreateImage": volk.lib.vkCreateImage,
+            "vkDestroyImage": volk.lib.vkDestroyImage,
+            "vkCmdCopyBuffer": volk.lib.vkCmdCopyBuffer,
+            "vkGetBufferMemoryRequirements2KHR": volk.lib.vkGetBufferMemoryRequirements2,
+            "vkGetImageMemoryRequirements2KHR": volk.lib.vkGetImageMemoryRequirements2,
+            "vkBindBufferMemory2KHR": volk.lib.vkBindBufferMemory2,
+            "vkGetPhysicalDeviceMemoryProperties2KHR": volk.lib.vkGetPhysicalDeviceMemoryProperties2,
+            "vkGetDeviceBufferMemoryRequirements": volk.lib.vkGetDeviceBufferMemoryRequirements,
+            "vkGetDeviceImageMemoryRequirements": volk.lib.vkGetDeviceImageMemoryRequirements
+        }
+
+        self.allocator.init(fn_table, self._physical_device, self.device, self.instance)
         self.graphics_command_pool = CommandPool(self.device, self.queue_family_indices.graphics_family)
         self.graphics_command_pool.create()
         self.transfer_command_pool = CommandPool(self.device, self.queue_family_indices.transfer_family)
         self.transfer_command_pool.create()
-        self.swap_chain = SwapChain(self.instance, self._physical_device, self.window, self.surface, self.queue_family_indices, self.device, self.graphics_command_pool, self.render_pass, VkApp.MAX_FRAMES_IN_FLIGHT)
+        self.transfer_sync_handler = SyncHandler(self.device)
+        self.transfer_sync_handler.create()
+        self.transfer_sync_handler.reset_fence()
+        self.swap_chain = SwapChain(self.instance, self._physical_device, self.window, self.surface,
+                                    self.queue_family_indices, self.device, self.graphics_command_pool,
+                                    self.render_pass, VkApp.MAX_FRAMES_IN_FLIGHT)
         self.swap_chain.create()
         self.swap_chain.create_image_views()
         self.render_pass = RenderPass(self.device, self.swap_chain)
         self.render_pass.create()
         self.frame_buffers = FrameBuffers(self.device, self.render_pass, self.swap_chain)
         self.frame_buffers.create()
-        self.pipeline = GraphicsPipeline(self, { ShaderType.VERTEX: self._shaders.default_vertex, ShaderType.FRAGMENT: self._shaders.default_frag })
+        self.pipeline = GraphicsPipeline(self, {ShaderType.VERTEX: self._shaders.default_vertex,
+                                                ShaderType.FRAGMENT: self._shaders.default_frag})
         self.pipeline.create()
 
     def _create_instance(self):
@@ -143,7 +184,7 @@ class VkApp:
             return None
 
     def _select_physical_device(self):
-        #returns list of all physical devices (with vulkan support) on the system
+        # returns list of all physical devices (with vulkan support) on the system
         devices = vkEnumeratePhysicalDevices(self.instance)
 
         for device in devices:
@@ -183,7 +224,7 @@ class VkApp:
             flags=0
         )
 
-        self.device = vkCreateDevice(self._physical_device, device_create_info, None) # VkDevice*
+        self.device = vkCreateDevice(self._physical_device, device_create_info, None)  # VkDevice*
         self._graphics_queue = vkGetDeviceQueue(self.device, self.queue_family_indices.graphics_family, 0)
         self._present_queue = vkGetDeviceQueue(self.device, self.queue_family_indices.present_family, 0)
         self._transfer_queue = vkGetDeviceQueue(self.device, self.queue_family_indices.transfer_family, 0)
@@ -193,7 +234,7 @@ class VkApp:
         # the size of VkSurfaceKHR_T is unknown by cffi so we cannot allocate it like normal
         # ex: VKSurfaceKHR surface;
         surface_ptr = ffi.new("VkSurfaceKHR*")
-        #FFI#addressof returns ptr to c data
+        # FFI#addressof returns ptr to c data
         glfw.create_window_surface(self.instance, self.window.handle(), None, surface_ptr)
         # deref the ptr
         self.surface = surface_ptr[0]
@@ -220,7 +261,8 @@ class VkApp:
 
         command_buffer.reset()
         self.record_command_buffer(command_buffer, image_idx)
-        submit_info = sync_handler.buffer_submission_info([command_buffer.handle], [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT])
+        submit_info = sync_handler.buffer_submission_info([command_buffer.handle],
+                                                          [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT])
         vkQueueSubmit(self._graphics_queue, 1, [submit_info], sync_handler.in_flight_fence)
         presentation_info = sync_handler.presentation_info([self.swap_chain.handle], image_idx)
         vkQueuePresentKHR(self.device, self._present_queue, presentation_info)
@@ -247,18 +289,19 @@ class VkApp:
         return queue_family_indices
 
     def _is_device_suitable(self, device):
-        #find required indices
+        # find required indices
         queue_family_indices = self._find_queue_families(device)
         supports_extensions = self._check_device_extension_support(device)
 
         adequate_swap_chain = False
         if supports_extensions:
             swap_chain_support_details = SwapChain.query_swap_chain_support_details(self.instance, device, self.surface)
-            adequate_swap_chain = len(swap_chain_support_details.formats) > 0 and len(swap_chain_support_details.presentModes) > 0
+            adequate_swap_chain = len(swap_chain_support_details.formats) > 0 and len(
+                swap_chain_support_details.presentModes) > 0
 
-
-        #return queue family indices and swap chain support details so that they don't have to be requeried later
-        return (queue_family_indices.is_complete() and supports_extensions and adequate_swap_chain), queue_family_indices
+        # return queue family indices and swap chain support details so that they don't have to be requeried later
+        return (
+                    queue_family_indices.is_complete() and supports_extensions and adequate_swap_chain), queue_family_indices
 
     def _check_device_extension_support(self, device):
         supported_extensions = vkEnumerateDeviceExtensionProperties(device, None)
@@ -317,6 +360,7 @@ class VkApp:
         SyncHandler.wait_idle(self.device)
         self.graphics_command_pool.destroy()
         self.transfer_command_pool.destroy()
+        self.transfer_sync_handler.destroy()
         self.pipeline.destroy()
         self.frame_buffers.destroy()
         self.render_pass.destroy()
@@ -328,6 +372,7 @@ class VkApp:
             vkDestroyDebugUtilsMessengerEXT(self.instance, self._debug_messenger, None)
 
         vkDestroyInstance(self.instance, None)
+
 
 class QueueFamilyIndices:
     def __init__(self, graphics_family=None, present_family=None, transfer_queue=None):

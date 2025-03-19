@@ -14,6 +14,7 @@ class VmaAllocator:
         create_info.physicalDevice = physical_device
         create_info.device = device
         create_info.instance = instance
+        create_info.flags = vma.lib.VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT
         create_info.pVulkanFunctions = vma_vk_functions
 
         self.handle = vma.ffi.new("VmaAllocator *")

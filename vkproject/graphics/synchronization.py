@@ -1,5 +1,6 @@
+from vkproject.graphics.commands import CommandBuffer, CommandPool, CommandBufferRecordingType
 from vkproject.graphics.vulkan import *
-from vkproject.graphics.vulkan.extensions.khr import vkAcquireNextImageKHR
+from typing import Callable
 
 
 class SyncHandler:
@@ -34,6 +35,19 @@ class SyncHandler:
             pImageIndices=[image_idx],
             pResults=None
         )
+
+    def blocking_submit(self, queue, command_pool: CommandPool, action: Callable[[CommandBuffer], None]):
+        buffer = CommandBuffer(self.device, command_pool)
+        buffer.create()
+        buffer.begin_recording(CommandBufferRecordingType.ONE_TIME_SUBMIT)
+        action(buffer)
+        buffer.end_recording()
+
+        submission_info = VkSubmitInfo(
+
+        )
+
+        vkQueueSubmit(command_pool)
 
     @staticmethod
     def wait_idle(device):
